@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Schede Pazienti</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#14181f;--mut:#6b7280;--ac:#0f766e;--actx:#fff;--ac2:#e6f4f2;--bd:#e5e7eb;--dan:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#181e26;--tx:#eef1f5;--mut:#98a2b3;--ac:#2dd4bf;--actx:#04201d;--ac2:#12302d;--bd:#28303a;--dan:#f87171}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:16px}
+#app{max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
+h1{font-size:26px;margin:4px 0 14px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:22px 0 8px;font-weight:600}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.mut{color:var(--mut);font-size:14px}
+.name{font-weight:600;font-size:17px}
+.btn{appearance:none;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;padding:11px 15px;font-size:16px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--ac);color:var(--actx);border-color:var(--ac)}
+.btn.dan{color:var(--dan)}
+.btn.sm{padding:7px 11px;font-size:14px;border-radius:10px}
+.btn.ico{padding:8px 11px;font-size:15px;line-height:1}
+input,textarea{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:11px;margin-top:5px}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:13px;color:var(--mut);margin-top:12px;font-weight:600}
+.badge{display:inline-block;background:var(--ac2);color:var(--ac);border-radius:999px;padding:2px 9px;font-size:12.5px;font-weight:700}
+.big{font-size:46px;font-weight:800;line-height:1;color:var(--ac)}
+.pt{cursor:pointer}
+.ex{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--bd)}
+.ex:first-child{border-top:0}
+.ex .ctl{display:flex;flex-direction:column;gap:4px}
+.empty{text-align:center;color:var(--mut);padding:26px 10px}
+.back{background:none;border:0;color:var(--ac);font-size:17px;font-weight:600;padding:6px 0;cursor:pointer}
+#m{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+#m.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.sheet h3{margin:0 0 4px;font-size:19px}
+.acts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.acts .btn{flex:1}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20}
+#toast.on{opacity:1}
+details summary{cursor:pointer;font-weight:600;padding:4px 0}
+.hs{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--bd)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ph{position:relative;background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.ph>img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--ac2);cursor:pointer}
+.ph .cap{padding:8px 10px;font-size:13px}
+.ph .sel{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.4);color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ph .sel.on{background:var(--ac);border-color:var(--ac);color:var(--actx)}
+.strip{display:flex;gap:6px;margin-top:10px}
+.strip img{width:58px;height:72px;object-fit:cover;border-radius:8px;background:var(--ac2)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cmp img{width:100%;max-height:55vh;object-fit:contain;background:var(--bg);border-radius:10px}
+.cmp .d{font-weight:700;text-align:center;margin-top:6px}
+.vimg{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:var(--bg);margin-top:12px}
+.pv{display:none;width:100%;max-height:36vh;object-fit:contain;border-radius:10px;margin-top:12px;background:var(--bg)}
+video{display:block;width:100%;max-height:58vh;border-radius:12px;background:#000;margin-top:12px}
+.anam h4{margin:14px 0 2px;font-size:12.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.anam h4:first-child{margin-top:0}
+.anam p{margin:0;white-space:pre-wrap}
+#warn{max-width:640px;margin:max(10px,env(safe-area-inset-top)) 12px 0;padding:12px 14px;background:#fff3cd;color:#5c4400;border:1px solid #e8d48a;border-radius:12px;font-size:14px;line-height:1.35}
+#warn[hidden]{display:none}
+@media(min-width:664px){#warn{margin-left:auto;margin-right:auto}}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two>div{min-width:0}
+.sec{margin:22px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700}
+.kv{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}
+.kv:first-child{border-top:0;padding-top:2px}
+.kv .v{font-weight:600;overflow-wrap:anywhere}
+.kv a{color:var(--ac);text-decoration:none}
+</style>
+</head>
+<body>
+<div id="warn" hidden><b>Stai usando l’anteprima di File.</b> Qui foto, video, condivisione e salvataggio dei dati non sono affidabili. Apri l’app da Safari, dalla versione online.</div>
+<div id="app"></div>
+<div id="m"></div>
+<div id="toast"></div>
+<input type="file" id="imp" accept="application/json,.json" style="display:none">
+<input type="file" id="pcam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="plib" accept="image/*" style="display:none">
+<input type="file" id="vcam" accept="video/*" capture="environment" style="display:none">
+<input type="file" id="vlib" accept="video/*" style="display:none">
+<datalist id="dl"></datalist>
+<datalist id="dlf"><option value="1 volta al giorno"><option value="2 volte al giorno"><option value="3 volte al giorno"><option value="Ogni giorno"><option value="A giorni alterni"><option value="3 volte a settimana"><option value="2 volte a settimana"><option value="1 volta a settimana"></datalist>
+<script>
+const KEY='schede_pazienti_v1';
+let db={patients:[]};
+let view={page:'home',id:null,q:'',arch:false};
+
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);if(d&&Array.isArray(d.patients))db=d}}catch(e){}norm()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('Salvataggio non riuscito: fai un backup')}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmt=iso=>{if(!iso)return '';const [y,m,d]=iso.split('-');return d+'/'+m+'/'+y};
+const $=id=>document.getElementById(id);
+const pt=id=>db.patients.find(p=>p.id===id);
+let tt;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2200)}
+
+/* ---- media (IndexedDB) ---- */
+const pend={};
+let _idb;
+function idb(){
+  if(_idb)return _idb;
+  const pr=_idb=new Promise((res,rej)=>{
+    if(!window.indexedDB){rej(new Error('noidb'));return}
+    const r=indexedDB.open('schede_media',1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore('m',{keyPath:'id'})};
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+  pr.catch(()=>{if(_idb===pr)_idb=null});
+  return pr;
+}
+async function mtx(mode,fn){
+  const d=await idb();
+  return new Promise((res,rej)=>{
+    const t=d.transaction('m',mode);let out;
+    const rq=fn(t.objectStore('m'));
+    if(rq)rq.onsuccess=()=>{out=rq.result};
+    t.oncomplete=()=>res(out);
+    t.onerror=()=>rej(t.error);
+    t.onabort=()=>rej(t.error);
+  });
+}
+const mput=rec=>mtx('readwrite',s=>s.put(rec));
+const mget=id=>mtx('readonly',s=>s.get(id));
+const mdel=id=>mtx('readwrite',s=>s.delete(id));
+const mkeys=()=>mtx('readonly',s=>s.getAllKeys());
+const urlC={};
+async function murl(id,th){
+  const k=id+(th?'t':'');
+  if(urlC[k])return urlC[k];
+  const r=await mget(id).catch(()=>null);
+  if(!r)return null;
+  return urlC[k]=URL.createObjectURL((th&&r.thumb)||r.blob);
+}
+async function mdrop(id){
+  if(!id)return;
+  ['','t'].forEach(s=>{if(urlC[id+s]){URL.revokeObjectURL(urlC[id+s]);delete urlC[id+s]}});
+  try{await mdel(id)}catch(e){}
+}
+function hydrate(root){
+  (root||document).querySelectorAll('[data-mid]').forEach(async el=>{
+    if(el.getAttribute('src'))return;
+    const u=await murl(el.dataset.mid,el.dataset.t==='1');
+    if(u&&el.isConnected)el.src=u+(el.tagName==='VIDEO'?'#t=0.1':'');
+  });
+}
+function dropPatientMedia(q){
+  (q.photos||[]).forEach(f=>mdrop(f.mid));
+  (q.exercises||[]).forEach(x=>{if(x.vid)mdrop(x.vid)});
+}
+function norm(){
+  db.patients.forEach(p=>{p.photos=p.photos||[];p.anam=p.anam||{};p.exercises=p.exercises||[];p.sessions=p.sessions||[]});
+}
+function loadImg(blob){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(blob),im=new Image();
+    im.onload=()=>res({im,u});
+    im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'))};
+    im.src=u;
+  });
+}
+async function shrink(blob,max,q){
+  const {im,u}=await loadImg(blob);
+  const s=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));
+  const w=Math.max(1,Math.round(im.naturalWidth*s)),h=Math.max(1,Math.round(im.naturalHeight*s));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(im,0,0,w,h);
+  URL.revokeObjectURL(u);
+  return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('blob')),'image/jpeg',q));
+}
+const EXT={'video/quicktime':'mov','video/mp4':'mp4','video/webm':'webm','video/x-m4v':'m4v','image/jpeg':'jpg'};
+const safe=s=>String(s).replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim()||'file';
+function saveBlob(blob,fname){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function shareBlob(blob,fname,title){
+  try{
+    const file=new File([blob],fname,{type:blob.type||'application/octet-stream'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:title||fname});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  saveBlob(blob,fname);
+  toast('File salvato: lo trovi nei Download');
+}
+const daysBetween=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+function groupList(p,g){
+  return p.photos.map((x,i)=>({x,i})).filter(o=>o.x.group===g).sort((a,b)=>a.x.date.localeCompare(b.x.date)||a.i-b.i).map(o=>o.x);
+}
+
+/* ---- anamnesi ---- */
+function anamHtml(p){
+  const A=p.anam||{};const has=A.storia||A.limiti||A.obiettivi;
+  let h='<div class="top"><h2>Anamnesi</h2><button class="btn sm" data-a="editanam">'+(has?'Modifica':'+ Compila')+'</button></div><div class="card anam">';
+  if(!has)h+='<div class="empty" style="padding:10px">Nessuna anamnesi compilata.</div>';
+  else{
+    if(A.storia)h+='<h4>Anamnesi iniziale'+(A.data?' · '+fmt(A.data):'')+'</h4><p>'+esc(A.storia)+'</p>';
+    if(A.limiti)h+='<h4>Difficoltà nel quotidiano</h4><p>'+esc(A.limiti)+'</p>';
+    if(A.obiettivi)h+='<h4>Obiettivi del paziente</h4><p>'+esc(A.obiettivi)+'</p>';
+  }
+  return h+'</div>';
+}
+function anamModal(p){
+  const a=p.anam||{};
+  openModal('<h3>Anamnesi</h3>'
+    +'<label>Data</label><input id="a0" type="date" value="'+esc(a.data||today())+'">'
+    +'<label>Anamnesi iniziale (motivo della visita, storia, trattamenti precedenti)</label><textarea id="a1" style="min-height:120px">'+esc(a.storia)+'</textarea>'
+    +'<label>Difficoltà nel quotidiano</label><textarea id="a2" style="min-height:90px">'+esc(a.limiti)+'</textarea>'
+    +'<label>Obiettivi che vuole raggiungere</label><textarea id="a3" style="min-height:90px">'+esc(a.obiettivi)+'</textarea>'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="saveanam">Salva</button></div>');
+}
+
+/* ---- video esercizio ---- */
+function vidModal(p,x){
+  const has=!!x.vid;
+  openModal('<h3>'+esc(x.name)+'</h3><div class="mut">Video di esecuzione'+(has?'':' · nessun video ancora')+'</div>'
+    +(has?'<video data-mid="'+x.vid+'" controls playsinline preload="auto"></video><div id="verr" style="display:none;margin-top:8px;font-size:14px;color:var(--dan)">Il telefono non riesce a riprodurre il video qui dentro. Usa “Condividi col paziente” per salvarlo o inviarlo e controllalo da lì.</div>':'')
+    +(has?'<div class="acts"><button class="btn pri" data-a="vidshare" data-id="'+x.id+'">Condividi col paziente</button></div>':'')
+    +'<div class="acts"><button class="btn'+(has?'':' pri')+'" data-a="vidcam" data-id="'+x.id+'">'+(has?'Registra di nuovo':'Registra video')+'</button>'
+    +'<button class="btn" data-a="vidlib" data-id="'+x.id+'">'+(has?'Sostituisci dalla libreria':'Dalla libreria')+'</button></div>'
+    +'<p class="mut" style="margin:12px 0 0">Meglio clip brevi (10–30 secondi): i video lunghi occupano molto spazio sul telefono.</p>'
+    +(has?'<div class="acts"><button class="btn dan" data-a="viddel" data-id="'+x.id+'">Elimina video</button></div>':'')
+    +'<div class="acts"><button class="btn" data-a="close">Chiudi</button></div>');
+  hydrate($('m'));
+  const vv=$('m').querySelector('video');if(vv)vv.addEventListener('error',()=>{const q=$('verr');if(q)q.style.display='block'});
+  if(has)mget(x.vid).then(r=>{pend.rec=r}).catch(()=>{});
+}
+function flagCam(kind){try{sessionStorage.setItem('pendCam',kind)}catch(e){}}
+function unflagCam(){try{sessionStorage.removeItem('pendCam')}catch(e){}}
+async function onVideo(e){
+  unflagCam();
+  const f=e.target.files[0];
+  if(!f)return;
+  const p=pt(view.id)||pt(pend.pid);
+  const x=p&&p.exercises.find(q=>q.id===pend.ex);
+  if(!x){toast('Esercizio non trovato: riapri l\u2019esercizio e riprova');e.target.value='';return}
+  if(!f.size){toast('Il video risulta vuoto: riprova');e.target.value='';return}
+  toast('Salvataggio video ('+(Math.round(f.size/104857.6)/10)+' MB)\u2026');
+  try{
+    const id=uid();
+    await mput({id,blob:f,type:f.type||'video/mp4'});
+    const back=await mget(id);
+    if(!back||!back.blob||!back.blob.size)throw new Error('verifica');
+    const old=x.vid;x.vid=id;save();
+    if(old)await mdrop(old);
+    pend.rec=null;
+    vidModal(p,x);render();toast('Video salvato');
+  }catch(err){toast('Video non salvato: '+((err&&err.name)||'errore'))}
+  e.target.value='';
+}
+async function shareVideo(p,xid){
+  const x=p.exercises.find(q=>q.id===xid);if(!x||!x.vid)return;
+  const rec=(pend.rec&&pend.rec.id===x.vid)?pend.rec:await mget(x.vid).catch(()=>null);
+  if(!rec){toast('Video non trovato');return}
+  await shareBlob(rec.blob,safe(x.name+' - '+p.name)+'.'+(EXT[rec.blob.type]||'mp4'),x.name);
+}
+
+/* ---- foto di confronto ---- */
+function photosHtml(p){
+  const groups=[];
+  p.photos.forEach(x=>{let g=groups.find(q=>q.name===x.group);if(!g){g={name:x.group,list:[]};groups.push(g)}g.list.push(x)});
+  let h='<div class="top"><h2>Foto di confronto</h2><button class="btn pri sm" data-a="newph" data-g="">+ Foto</button></div>';
+  if(!groups.length)h+='<div class="card"><div class="empty" style="padding:10px">Nessuna foto. Scatta la prima, per esempio “Flessione polso passiva”: potrai confrontarla nel tempo.</div></div>';
+  groups.forEach(g=>{
+    const l=groupList(p,g.name);
+    h+='<div class="card pt" data-a="opengroup" data-g="'+esc(g.name)+'"><div class="row"><div class="grow"><div class="name">'+esc(g.name)+'</div><div class="mut">'
+      +l.length+' foto · '+fmt(l[0].date)+(l.length>1?' → '+fmt(l[l.length-1].date):'')+'</div></div><span class="badge">'+l.length+'</span></div>'
+      +'<div class="strip">'+l.slice(-4).map(x=>'<img data-mid="'+x.mid+'" data-t="1" alt="">').join('')+'</div></div>';
+  });
+  return h;
+}
+function renderGroup(p){
+  const g=view.group,list=groupList(p,g);
+  if(!list.length){view.page='detail';return renderDetail(p)}
+  const sel=view.sel||[];
+  let h='<button class="back" data-a="backdetail">‹ '+esc(p.name)+'</button>';
+  h+='<div class="top"><h1 style="margin-bottom:6px">'+esc(g)+'</h1><button class="btn sm" data-a="rengroup">Rinomina</button></div>';
+  h+='<div class="mut" style="margin-bottom:12px">'+list.length+' foto · dal '+fmt(list[0].date)+' al '+fmt(list[list.length-1].date)+'</div>';
+  h+='<div class="acts" style="margin:0 0 10px"><button class="btn pri" data-a="newph" data-g="'+esc(g)+'">+ Foto</button>'+(list.length>1?'<button class="btn" data-a="cmpfl">Prima ↔ ultima</button>':'')+'</div>';
+  if(list.length>2)h+='<button class="btn" style="width:100%;margin-bottom:6px" data-a="cmpsel"'+(sel.length===2?'':' disabled')+'>Confronta due foto scelte ('+sel.length+'/2)</button><div class="mut" style="margin-bottom:12px;font-size:13px">Tocca il cerchio in alto a destra di due foto per confrontarle.</div>';
+  h+='<div class="grid">';
+  list.forEach((x,i)=>{
+    const on=sel.includes(x.id);
+    h+='<div class="ph"><img data-mid="'+x.mid+'" data-t="1" data-a="viewph" data-id="'+x.id+'" alt="">'
+      +(list.length>2?'<button class="sel'+(on?' on':'')+'" data-a="selph" data-id="'+x.id+'">'+(on?'✓':'')+'</button>':'')
+      +'<div class="cap"><b>'+fmt(x.date)+'</b> <span class="mut">· '+(i?'+'+daysBetween(list[0].date,x.date)+' gg':'prima foto')+'</span>'
+      +(x.note?'<div class="mut">'+esc(x.note)+'</div>':'')+'</div></div>';
+  });
+  return h+'</div>';
+}
+function photoModal(p,preGroup){
+  pend.photo=null;
+  const groups=[...new Set(p.photos.map(x=>x.group))];
+  openModal('<h3>Nuova foto</h3>'
+    +'<label>Movimento / gruppo (es. Flessione polso passiva)</label><input id="f_group" list="dlg" value="'+esc(preGroup)+'" autocomplete="off"><datalist id="dlg">'+groups.map(g=>'<option value="'+esc(g)+'">').join('')+'</datalist>'
+    +'<label>Data</label><input id="f_date" type="date" value="'+today()+'">'
+    +'<label>Nota (opzionale)</label><input id="f_note" autocomplete="off">'
+    +'<div class="acts"><button class="btn" data-a="phcam">📷 Scatta foto</button><button class="btn" data-a="phlib">Dalla libreria</button></div>'
+    +'<img id="pv" class="pv" alt="">'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="savephoto">Salva foto</button></div>');
+}
+function onPhoto(e){
+  unflagCam();
+  const f=e.target.files[0];e.target.value='';
+  if(!f)return;
+  pend.photo=f;
+  const pv=$('pv');if(!pv)return;
+  if(pend.pvu)URL.revokeObjectURL(pend.pvu);
+  pend.pvu=URL.createObjectURL(f);pv.src=pend.pvu;pv.style.display='block';
+}
+async function savePhoto(p){
+  const group=($('f_group').value||'').trim(),date=$('f_date').value||today(),note=$('f_note').value.trim();
+  if(!group){toast('Scrivi il movimento (es. Flessione polso)');return}
+  if(!pend.photo){toast('Scatta o scegli una foto');return}
+  const ex=p.photos.find(x=>x.group.toLowerCase()===group.toLowerCase());
+  const g=ex?ex.group:group;
+  toast('Salvataggio foto…');
+  try{
+    const mid=uid();
+    const full=await shrink(pend.photo,1600,.85),th=await shrink(pend.photo,360,.8);
+    await mput({id:mid,blob:full,thumb:th,type:'image/jpeg'});
+    p.photos.push({id:uid(),mid,date,group:g,note});
+    save();closeModal();
+    view={...view,page:'group',id:p.id,group:g,sel:[]};
+    render();window.scrollTo(0,0);toast('Foto salvata');
+  }catch(err){toast('Impossibile salvare la foto')}
+}
+function viewPhoto(ph){
+  openModal('<h3>'+esc(ph.group)+'</h3><div class="mut">'+fmt(ph.date)+(ph.note?' · '+esc(ph.note):'')+'</div>'
+    +'<img class="vimg" data-mid="'+ph.mid+'" alt="">'
+    +'<div class="acts"><button class="btn" data-a="phshare" data-id="'+ph.id+'">Condividi</button><button class="btn" data-a="phedit" data-id="'+ph.id+'">Modifica</button><button class="btn dan" data-a="phdel" data-id="'+ph.id+'">Elimina</button></div>'
+    +'<div class="acts"><button class="btn pri" data-a="close">Chiudi</button></div>');
+  hydrate($('m'));
+  mget(ph.mid).then(r=>{pend.rec=r}).catch(()=>{});
+}
+async function sharePhoto(p,id){
+  const ph=p.photos.find(q=>q.id===id);if(!ph)return;
+  const rec=(pend.rec&&pend.rec.id===ph.mid)?pend.rec:await mget(ph.mid).catch(()=>null);
+  if(!rec){toast('Foto non trovata');return}
+  await shareBlob(rec.blob,safe(ph.group+' '+ph.date)+'.jpg',ph.group);
+}
+function editPhoto(p,id){
+  const ph=p.photos.find(q=>q.id===id);if(!ph)return;
+  const groups=[...new Set(p.photos.map(x=>x.group))];
+  openModal('<h3>Modifica foto</h3>'
+    +'<label>Movimento / gruppo</label><input id="f_group" list="dlg" value="'+esc(ph.group)+'" autocomplete="off"><datalist id="dlg">'+groups.map(g=>'<option value="'+esc(g)+'">').join('')+'</datalist>'
+    +'<label>Data</label><input id="f_date" type="date" value="'+esc(ph.date)+'">'
+    +'<label>Nota</label><input id="f_note" value="'+esc(ph.note)+'" autocomplete="off">'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="saveph" data-id="'+id+'">Salva</button></div>');
+}
+function cmpModal(a,b){
+  if(a.date>b.date){const t=a;a=b;b=t}
+  const d=daysBetween(a.date,b.date);
+  const side=x=>'<div><img data-mid="'+x.mid+'" alt=""><div class="d">'+fmt(x.date)+'</div>'+(x.note?'<div class="mut" style="text-align:center">'+esc(x.note)+'</div>':'')+'</div>';
+  openModal('<h3>'+esc(a.group)+'</h3><div class="mut">'+(d===0?'Stesso giorno':'Intervallo: '+d+' giorni')+'</div>'
+    +'<div class="cmp">'+side(a)+side(b)+'</div>'
+    +'<div class="acts"><button class="btn pri" data-a="close">Chiudi</button></div>');
+  hydrate($('m'));
+}
+
+function openModal(html){const m=$('m');m.innerHTML='<div class="sheet">'+html+'</div>';m.classList.add('on')}
+function closeModal(){$('m').classList.remove('on');$('m').innerHTML='';pend.photo=null;pend.rec=null;if(pend.pvu){URL.revokeObjectURL(pend.pvu);pend.pvu=null}}
+$('m').addEventListener('click',e=>{if(e.target.id==='m')closeModal()});
+
+function refreshDatalist(){
+  const names=new Set();db.patients.forEach(p=>p.exercises.forEach(x=>names.add(x.name)));
+  $('dl').innerHTML=[...names].sort().map(n=>'<option value="'+esc(n)+'">').join('');
+}
+
+function render(){
+  refreshDatalist();
+  const a=$('app');
+  if(view.page==='home')a.innerHTML=renderHome();
+  else{const p=pt(view.id);if(!p){view.page='home';return render()}a.innerHTML=view.page==='group'?renderGroup(p):renderDetail(p)}
+  hydrate(a);
+}
+
+function renderHome(){
+  const q=view.q.trim().toLowerCase();
+  let list=db.patients.filter(p=>!!p.archived===view.arch&&(!q||p.name.toLowerCase().includes(q)));
+  list.sort((a,b)=>(splitName(a)[1]+' '+splitName(a)[0]).trim().localeCompare((splitName(b)[1]+' '+splitName(b)[0]).trim(),'it'));
+  const nArch=db.patients.filter(p=>p.archived).length;
+  let h='<div class="top"><h1>Pazienti</h1><div class="row"><button class="btn sm" data-a="backup">Backup</button><button class="btn pri sm" data-a="newpt">+ Nuovo</button></div></div>';
+  h+='<input id="q" type="search" placeholder="Cerca paziente…" value="'+esc(view.q)+'" style="margin:0 0 12px">';
+  if(!list.length)h+='<div class="empty">'+(db.patients.length&&!view.arch?'Nessun paziente trovato.':view.arch?'Nessun paziente archiviato.':'Nessun paziente ancora.<br>Tocca “+ Nuovo” per iniziare.')+'</div>';
+  list.forEach(p=>{
+    const n=p.sessions.length,last=n?p.sessions[n-1].date:'';
+    h+='<div class="card pt" data-a="open" data-id="'+p.id+'"><div class="row"><div class="grow"><div class="name">'+esc(p.name)+'</div><div class="mut">'
+      +p.exercises.length+' esercizi'+(last?' · ultima seduta '+fmt(last):'')+'</div></div><span class="badge">Seduta '+n+(p.total?'/'+p.total:'')+'</span></div></div>';
+  });
+  if(nArch||view.arch)h+='<div style="text-align:center;margin-top:14px"><button class="btn sm" data-a="toggleArch">'+(view.arch?'← Torna agli attivi':'Mostra archiviati ('+nArch+')')+'</button></div>';
+  return h;
+}
+
+function renderDetail(p){
+  const n=p.sessions.length,last=n?p.sessions[n-1]:null;
+  let h='<button class="back" data-a="home">‹ Pazienti</button>';
+  h+='<div class="top"><h1 style="margin-bottom:6px">'+esc(p.name)+'</h1><button class="btn sm" data-a="editpt">Modifica</button></div>';
+  if(p.notes)h+='<div class="mut" style="margin-bottom:10px;white-space:pre-wrap">'+esc(p.notes)+'</div>';
+  h+='<div class="card"><div class="row"><div class="grow"><div class="mut">Sedute fatte'+(p.total?' (su '+p.total+')':'')+'</div><div class="big">'+n+'</div>'
+    +(last?'<div class="mut" style="margin-top:6px">Ultima: '+fmt(last.date)+'</div>':'')
+    +'</div><div style="display:flex;flex-direction:column;gap:8px"><button class="btn pri" data-a="addsess">+ Segna seduta</button><button class="btn sm" data-a="undosess"'+(n?'':' disabled')+'>− Annulla ultima</button></div></div></div>';
+  h+=anamHtml(p);
+  h+='<div class="top"><h2>Esercizi lasciati</h2><button class="btn pri sm" data-a="addex">+ Aggiungi</button></div>';
+  h+='<div class="card" style="padding:4px 14px">';
+  if(!p.exercises.length)h+='<div class="empty">Nessun esercizio assegnato.</div>';
+  p.exercises.forEach((x,i)=>{
+    h+='<div class="ex"><div class="grow" data-a="editex" data-id="'+x.id+'" style="cursor:pointer"><div class="name">'+esc(x.name)+'</div>'
+      +((x.dose||x.freq)?'<div>'+esc(x.dose)+(x.dose&&x.freq?' · ':'')+esc(x.freq)+'</div>':'')+(x.note?'<div class="mut">'+esc(x.note)+'</div>':'')
+      +'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+(x.sess?'<span class="badge">dalla seduta '+x.sess+'</span>':'')+'<button class="btn sm" data-a="vid" data-id="'+x.id+'">'+(x.vid?'▶ Video':'+ Video')+'</button></div>'+'</div>'
+      +'<div class="ctl"><button class="btn ico" data-a="up" data-id="'+x.id+'"'+(i?'':' disabled')+'>↑</button><button class="btn ico" data-a="down" data-id="'+x.id+'"'+(i<p.exercises.length-1?'':' disabled')+'>↓</button></div></div>';
+  });
+  h+='</div>';
+  if(p.exercises.length)h+='<button class="btn" style="width:100%" data-a="share">Invia scheda esercizi (PDF)</button>';
+  h+=photosHtml(p);
+  h+=anagHtml(p);
+  h+='<h2>Storico sedute</h2><div class="card"><details><summary>'+n+' sedute registrate</summary>';
+  if(!n)h+='<div class="mut" style="padding:8px 0">Nessuna seduta.</div>';
+  p.sessions.map((s,i)=>({s,i})).reverse().forEach(({s,i})=>{
+    h+='<div class="hs"><span class="badge">'+(i+1)+'</span><div class="grow"><div>'+fmt(s.date)+'</div>'+(s.note?'<div class="mut">'+esc(s.note)+'</div>':'')+'</div><button class="btn sm" data-a="editsess" data-i="'+i+'">Modifica</button></div>';
+  });
+  h+='</details></div>';
+  h+='<div class="acts" style="margin-top:26px"><button class="btn" data-a="archive">'+(p.archived?'Riattiva paziente':'Archivia paziente')+'</button><button class="btn dan" data-a="delpt">Elimina</button></div>';
+  return h;
+}
+
+/* ---- modali ---- */
+function splitName(p){
+  if(p&&(p.nome!==undefined||p.cognome!==undefined))return [p.nome||'',p.cognome||''];
+  const w=String(p&&p.name||'').trim().split(/\s+/);const n=w.shift()||'';return [n,w.join(' ')];
+}
+function ptForm(p){
+  const [nome,cognome]=splitName(p),q=p||{};
+  openModal('<h3>'+(p?'Modifica paziente':'Nuovo paziente')+'</h3>'
+    +'<div class="two"><div><label>Nome</label><input id="f_nome" value="'+esc(nome)+'" autocomplete="off"></div><div><label>Cognome</label><input id="f_cognome" value="'+esc(cognome)+'" autocomplete="off"></div></div>'
+    +'<label>Sedute prescritte (opzionale)</label><input id="f_total" type="number" inputmode="numeric" min="0" value="'+(q.total?q.total:'')+'">'
+    +'<label>Note (diagnosi, precauzioni…)</label><textarea id="f_notes">'+esc(q.notes)+'</textarea>'
+    +'<div class="sec">Dati per la fattura</div>'
+    +'<label>Codice fiscale</label><input id="f_cf" value="'+esc(q.cf)+'" maxlength="16" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">'
+    +'<div class="two"><div><label>Data di nascita</label><input id="f_nasc" type="date" value="'+esc(q.nascita)+'"></div><div><label>Luogo di nascita</label><input id="f_luogo" value="'+esc(q.luogoNasc)+'" autocomplete="off"></div></div>'
+    +'<label>Residenza (via, n., CAP, città, prov.)</label><input id="f_res" value="'+esc(q.residenza)+'" autocomplete="street-address">'
+    +'<label>Cellulare</label><input id="f_tel" type="tel" inputmode="tel" value="'+esc(q.tel)+'" autocomplete="off">'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="savept" data-id="'+(p?p.id:'')+'">Salva</button></div>');
+  setTimeout(()=>{const e=$('f_nome');if(e&&!p)e.focus()},50);
+}
+function cfOk(c){
+  if(!/^[A-Z0-9]{16}$/.test(c))return false;
+  const odd=[1,0,5,7,9,13,15,17,19,21,2,4,18,20,11,3,6,8,12,14,16,10,22,25,24,23];
+  let sum=0;
+  for(let i=0;i<15;i++){const ch=c[i],v=/\d/.test(ch)?+ch:ch.charCodeAt(0)-65;sum+=(i%2===0)?odd[v]:v}
+  return c[15]===String.fromCharCode(65+sum%26);
+}
+function anagText(p){
+  let t=p.name+'\n';
+  if(p.cf)t+='C.F.: '+p.cf+'\n';
+  if(p.nascita||p.luogoNasc)t+='Nato/a'+(p.nascita?' il '+fmt(p.nascita):'')+(p.luogoNasc?' a '+p.luogoNasc:'')+'\n';
+  if(p.residenza)t+='Residenza: '+p.residenza+'\n';
+  if(p.tel)t+='Cell.: '+p.tel+'\n';
+  return t.trim();
+}
+function anagHtml(p){
+  const rows=[];
+  if(p.cf)rows.push(['Codice fiscale',p.cf]);
+  if(p.nascita||p.luogoNasc)rows.push(['Nascita',(p.nascita?'il '+fmt(p.nascita):'')+(p.luogoNasc?(p.nascita?' ':'')+'a '+p.luogoNasc:'')]);
+  if(p.residenza)rows.push(['Residenza',p.residenza]);
+  if(p.tel)rows.push(['Cellulare',p.tel]);
+  let h='<div class="top"><h2>Dati per la fattura</h2><button class="btn sm" data-a="editpt">Modifica</button></div><div class="card">';
+  if(!rows.length)h+='<div class="empty" style="padding:10px">Nessun dato inserito. Tocca Modifica per aggiungere codice fiscale, nascita, residenza e cellulare.</div>';
+  else{
+    h+=rows.map(([k,v])=>'<div class="kv"><div class="grow"><div class="mut">'+k+'</div><div class="v">'+(k==='Cellulare'?'<a href="tel:'+esc(v.replace(/[^\d+]/g,''))+'">'+esc(v)+'</a>':esc(v))+'</div></div><button class="btn sm" data-a="cp" data-v="'+esc(v)+'">Copia</button></div>').join('');
+    h+='<div class="acts" style="margin-top:12px"><button class="btn" data-a="cpall">Copia tutti i dati</button></div>';
+  }
+  return h+'</div>';
+}
+function exForm(p,x){
+  openModal('<h3>'+(x?'Modifica esercizio':'Nuovo esercizio')+'</h3>'
+    +'<label>Esercizio</label><input id="f_name" list="dl" value="'+esc(x?x.name:'')+'" autocomplete="off">'
+    +'<label>Dosaggio (es. 3×12, 2×30")</label><input id="f_dose" value="'+esc(x?x.dose:'')+'" autocomplete="off">'
+    +'<label>Frequenza (es. 1 volta al giorno)</label><input id="f_freq" list="dlf" value="'+esc(x?x.freq:'')+'" autocomplete="off">'
+    +'<label>Note (opzionale)</label><textarea id="f_note">'+esc(x?x.note:'')+'</textarea>'
+    +'<div class="acts">'+(x?'<button class="btn dan" data-a="delex" data-id="'+x.id+'">Elimina</button>':'')
+    +'<button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="saveex" data-id="'+(x?x.id:'')+'">Salva</button></div>');
+  setTimeout(()=>{const e=$('f_name');if(e&&!x)e.focus()},50);
+}
+function sessForm(p,i){
+  const s=i==null?{date:today(),note:''}:p.sessions[i];
+  openModal('<h3>'+(i==null?'Seduta n. '+(p.sessions.length+1):'Modifica seduta n. '+(i+1))+'</h3>'
+    +'<label>Data</label><input id="f_date" type="date" value="'+esc(s.date)+'">'
+    +'<label>Note (opzionale)</label><textarea id="f_note">'+esc(s.note)+'</textarea>'
+    +'<div class="acts">'+(i!=null?'<button class="btn dan" data-a="delsess" data-i="'+i+'">Elimina</button>':'')
+    +'<button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="savesess" data-i="'+(i==null?'':i)+'">Salva</button></div>');
+}
+function confirmBox(msg,action,attrs){
+  openModal('<h3>'+esc(msg)+'</h3><div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="'+action+'" '+(attrs||'')+'>Conferma</button></div>');
+}
+
+/* ---- backup ---- */
+function backup(){
+  const np=db.patients.reduce((a,p)=>a+(p.photos||[]).length,0);
+  const nv=db.patients.reduce((a,p)=>a+p.exercises.filter(x=>x.vid).length,0);
+  openModal('<h3>Backup dati</h3><p class="mut">I dati stanno solo su questo dispositivo/browser. Il backup contiene pazienti, esercizi, anamnesi e le '+np+' foto. I '+nv+' video non sono inclusi: restano sul telefono (puoi salvarli o condividerli dal player di ogni esercizio).</p>'
+    +'<div class="acts"><button class="btn pri" data-a="export">Esporta backup</button><button class="btn" data-a="import">Importa backup</button></div>'
+    +'<div class="acts"><button class="btn" data-a="close">Chiudi</button></div>');
+}
+function blobToDataURL(b){
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+}
+function dataURLToBlob(u){
+  const i=u.indexOf(','),m=/data:([^;,]+)/.exec(u.slice(0,i));
+  const bin=atob(u.slice(i+1)),a=new Uint8Array(bin.length);
+  for(let k=0;k<bin.length;k++)a[k]=bin.charCodeAt(k);
+  return new Blob([a],{type:m?m[1]:'image/jpeg'});
+}
+async function doExport(){
+  toast('Preparo il backup…');
+  try{
+    const media={};
+    for(const p of db.patients)for(const ph of (p.photos||[])){
+      const r=await mget(ph.mid).catch(()=>null);
+      if(r)media[ph.mid]=await blobToDataURL(r.blob);
+    }
+    const blob=new Blob([JSON.stringify({patients:db.patients,media,v:2})],{type:'application/json'});
+    const f='backup-pazienti-'+today()+'.json';
+    await shareBlob(blob,f,f);
+  }catch(e){toast('Backup non riuscito')}
+}
+$('imp').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    let d;
+    try{d=JSON.parse(r.result);if(!d||!Array.isArray(d.patients))throw 0}catch(x){toast('File non valido');return}
+    if(!confirm('Sostituire tutti i dati attuali con il backup ('+d.patients.length+' pazienti)?'))return;
+    toast('Importo…');
+    try{
+      db={patients:d.patients};norm();
+      const keep=new Set();
+      for(const p of db.patients){
+        const ok=[];
+        for(const ph of p.photos){
+          const u=d.media&&d.media[ph.mid];
+          if(u){
+            const b=dataURLToBlob(u);let th;
+            try{th=await shrink(b,360,.8)}catch(x){}
+            await mput({id:ph.mid,blob:b,thumb:th,type:b.type});keep.add(ph.mid);ok.push(ph);
+          }else if(await mget(ph.mid).catch(()=>null)){keep.add(ph.mid);ok.push(ph)}
+        }
+        p.photos=ok;
+        for(const x of p.exercises){
+          if(x.vid){if(await mget(x.vid).catch(()=>null))keep.add(x.vid);else x.vid=null}
+        }
+      }
+      const all=await mkeys().catch(()=>[]);
+      for(const k of (all||[]))if(!keep.has(k))await mdrop(k);
+      save();closeModal();
+      view={page:'home',id:null,q:'',arch:false};render();toast('Backup importato');
+    }catch(err){toast('Importazione non riuscita')}
+  };
+  r.readAsText(f);
+});
+
+/* ---- condivisione ---- */
+function shareText(p){
+  let t='Scheda esercizi fisioterapici – '+p.name+'\n';
+  p.exercises.forEach((x,i)=>{t+='\n'+(i+1)+'. '+x.name+(x.dose?' — '+x.dose:'')+(x.freq?' — '+x.freq:'')+(x.note?'\n   '+x.note:'')});
+  return t;
+}
+function shareModal(p){
+  openModal('<h3>Scheda esercizi</h3><p class="mut">Il PDF contiene nome, data ed elenco esercizi con dosaggio e note. Le note cliniche del paziente non sono incluse.</p>'
+    +'<div class="acts"><button class="btn pri" data-a="pdf">Crea PDF</button><button class="btn" data-a="copytxt">Copia testo</button></div>'
+    +'<label>Testo (tieni premuto per selezionarlo)</label><textarea id="f_txt" readonly style="min-height:150px">'+esc(shareText(p))+'</textarea>'
+    +'<div class="acts"><button class="btn" data-a="close">Chiudi</button></div>');
+}
+function copy(t){
+  const ok=()=>toast('Copiato negli appunti');
+  const fb=()=>{try{let ta=$('f_txt'),tmp=false;if(!ta){ta=document.createElement('textarea');ta.value=t;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);tmp=true}ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length);const r=document.execCommand('copy');if(tmp)ta.remove();if(r)ok();else toast('Copia non riuscita')}catch(e){toast('Copia non riuscita')}};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else fb();
+}
+
+/* ---- PDF (generato nell'app, nessuna libreria) ---- */
+const HW={};
+(function(){
+  for(let c=48;c<=57;c++)HW[c]=556;
+  const o={32:278,33:278,34:355,35:556,36:556,37:889,38:667,39:191,40:333,41:333,42:389,43:584,44:278,45:333,46:278,47:278,58:278,59:278,60:584,61:584,62:584,63:556,64:1015,91:278,92:278,93:278,94:469,95:556,96:333,123:334,124:260,125:334,126:584};
+  for(const k in o)HW[k]=o[k];
+  const U=[667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611];
+  const L=[556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500];
+  for(let i=0;i<26;i++){HW[65+i]=U[i];HW[97+i]=L[i]}
+})();
+const EXTRA={'–':556,'—':1000,'‘':222,'’':222,'“':333,'”':333,'…':1000,'•':350,'×':584};
+function cw(ch){
+  if(EXTRA[ch])return EXTRA[ch];
+  const c=ch.charCodeAt(0);if(HW[c])return HW[c];
+  const b=ch.normalize('NFD').charCodeAt(0);return HW[b]||556;
+}
+function tw(s,size,bold){let w=0;for(const ch of s)w+=cw(ch);return w*size/1000*(bold?1.07:1)}
+const CP={'–':0x96,'—':0x97,'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'…':0x85,'•':0x95,'€':0x80};
+function enc(s){
+  let o='';
+  for(const ch of s){
+    const c=ch.codePointAt(0);let b;
+    if(CP[ch])b=CP[ch];else if((c>=32&&c<=126)||(c>=160&&c<=255))b=c;else b=63;
+    const x=String.fromCharCode(b);
+    o+=(x==='('||x===')'||x==='\\')?'\\'+x:x;
+  }
+  return o;
+}
+const SUB={'≤':'<=','≥':'>=','→':'->','←':'<-','≈':'~','↑':'^','↓':'v'};
+function wrap(text,size,bold,maxW){
+  const out=[];
+  String(text).replace(/[≤≥→←≈↑↓]/g,c=>SUB[c]).split(/\r?\n/).forEach(par=>{
+    const words=par.split(/\s+/).filter(Boolean);
+    if(!words.length){out.push('');return}
+    let cur='';
+    words.forEach(w=>{
+      const t=cur?cur+' '+w:w;
+      if(tw(t,size,bold)<=maxW||!cur)cur=t;else{out.push(cur);cur=w}
+    });
+    if(cur)out.push(cur);
+  });
+  return out;
+}
+function buildPdf(p){
+  const W=595,H=842,M=50;
+  const numX=M+8,exX=M+38,exW=232,doseX=335,doseW=92,freqX=436,freqW=W-M-freqX-2;
+  const pages=[];let y=0;
+  const cur=()=>pages[pages.length-1];
+  const put=(txt,x,size,bold,gray)=>cur().push('BT /F'+(bold?2:1)+' '+size+' Tf '+gray+' g 1 0 0 1 '+x.toFixed(1)+' '+y.toFixed(1)+' Tm ('+enc(txt)+') Tj ET');
+  const label=(txt,x)=>cur().push('BT /F2 8 Tf 0.45 g 1 Tc 1 0 0 1 '+x+' '+y.toFixed(1)+' Tm ('+enc(txt)+') Tj ET 0 Tc');
+  const hline=(yy,w,g)=>cur().push(w+' w '+g+' G '+M+' '+yy.toFixed(1)+' m '+(W-M)+' '+yy.toFixed(1)+' l S');
+  const tableHead=()=>{
+    cur().push('0.93 g '+M+' '+(y-22).toFixed(1)+' '+(W-2*M)+' 22 re f');
+    y-=15;put('N°',numX,9,true,0.15);put('ESERCIZIO',exX,9,true,0.15);put('DOSAGGIO',doseX,9,true,0.15);put('FREQUENZA',freqX,9,true,0.15);
+    y-=11;
+  };
+  const newPage=cont=>{
+    pages.push(['1 1 1 rg 0 0 '+W+' '+H+' re f','0 g']);
+    y=H-M;
+    if(cont){tableHead()}
+  };
+  newPage(false);
+  // intestazione
+  y-=20;put('Scheda esercizi fisioterapici',M,20,true,0);
+  y-=14;hline(y,1.4,0);
+  y-=20;label('PAZIENTE',M);label('DATA',395);label('SEDUTA N.',475);
+  const n=p.sessions.length;
+  const nameL=wrap(p.name,14,true,330);
+  y-=17;put(nameL[0],M,14,true,0);put(fmt(today()),395,12,false,0);put(n?String(n):'-',475,12,false,0);
+  nameL.slice(1).forEach(l=>{y-=17;put(l,M,14,true,0)});
+  y-=16;hline(y,0.5,0.8);
+  y-=14;
+  tableHead();
+  p.exercises.forEach((x,i)=>{
+    const nl=wrap(x.name,12,true,exW);
+    const tl=x.note?wrap(x.note,10,false,exW):[];
+    const dl=x.dose?wrap(x.dose,11,false,doseW):[];
+    const fl=x.freq?wrap(x.freq,11,false,freqW):[];
+    const h=Math.max(nl.length*15+(tl.length?3+tl.length*12.5:0),dl.length*14,fl.length*14)+16;
+    if(y-h<M+20){newPage(true)}
+    const top=y-8;
+    y=top-12;put(String(i+1),numX,11,true,0.15);
+    nl.forEach((l,k)=>{if(k)y-=15;put(l,exX,12,true,0)});
+    if(tl.length){y-=3;tl.forEach(l=>{y-=12.5;put(l,exX,10,false,0.35)})}
+    const e1=y;
+    y=top-12;dl.forEach((l,k)=>{if(k)y-=14;put(l,doseX,11,false,0.05)});
+    const e2=y;
+    y=top-12;fl.forEach((l,k)=>{if(k)y-=14;put(l,freqX,11,false,0.05)});
+    y=Math.min(e1,e2,y)-8;
+    hline(y,0.5,0.82);
+  });
+  // numeri di pagina
+  pages.forEach((ops,i)=>{ops.push('BT /F1 8.5 Tf 0.5 g 1 0 0 1 '+M+' 28 Tm ('+enc(p.name+' \u2022 Scheda esercizi fisioterapici')+') Tj ET');ops.push('BT /F1 8.5 Tf 0.5 g 1 0 0 1 '+(W-M-34)+' 28 Tm (Pag. '+(i+1)+'/'+pages.length+') Tj ET')});
+  // assemblaggio
+  const objs=[];
+  objs[1]='<</Type/Catalog/Pages 2 0 R>>';
+  objs[3]='<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>';
+  objs[4]='<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>';
+  const kids=[];
+  pages.forEach((ops,i)=>{
+    const pid=5+i*2,cid=6+i*2,s=ops.join('\n');
+    kids.push(pid+' 0 R');
+    objs[pid]='<</Type/Page/Parent 2 0 R/MediaBox[0 0 '+W+' '+H+']/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents '+cid+' 0 R>>';
+    objs[cid]='<</Length '+s.length+'>>\nstream\n'+s+'\nendstream';
+  });
+  objs[2]='<</Type/Pages/Kids['+kids.join(' ')+']/Count '+pages.length+'>>';
+  let out='%PDF-1.4\n';const off=[];
+  for(let i=1;i<objs.length;i++){off[i]=out.length;out+=i+' 0 obj\n'+objs[i]+'\nendobj\n'}
+  const xr=out.length;
+  out+='xref\n0 '+objs.length+'\n0000000000 65535 f \n';
+  for(let i=1;i<objs.length;i++)out+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+  out+='trailer\n<</Size '+objs.length+'/Root 1 0 R>>\nstartxref\n'+xr+'\n%%EOF';
+  const bytes=new Uint8Array(out.length);
+  for(let i=0;i<out.length;i++)bytes[i]=out.charCodeAt(i)&255;
+  return bytes;
+}
+async function sharePdf(p){
+  let bytes;
+  try{bytes=buildPdf(p)}catch(e){toast('Errore nella creazione del PDF');return}
+  const fname='Esercizi - '+p.name.replace(/[\\/:*?"<>|]/g,'').trim()+'.pdf';
+  const blob=new Blob([bytes],{type:'application/pdf'});
+  try{
+    const file=new File([blob],fname,{type:'application/pdf'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:fname});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  toast('PDF creato: lo trovi nei Download');
+}
+
+/* ---- azioni ---- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');if(!el||el.disabled)return;
+  const a=el.dataset.a,id=el.dataset.id,i=el.dataset.i,g=el.dataset.g;
+  const p=view.id?pt(view.id):null;
+  switch(a){
+    case 'close':closeModal();break;
+    case 'open':view={...view,page:'detail',id};render();window.scrollTo(0,0);break;
+    case 'home':view={...view,page:'home',id:null};render();break;
+    case 'toggleArch':view.arch=!view.arch;render();break;
+    case 'newpt':ptForm(null);break;
+    case 'editpt':ptForm(p);break;
+    case 'savept':{
+      const nome=$('f_nome').value.trim(),cognome=$('f_cognome').value.trim();
+      if(!nome&&!cognome){toast('Inserisci nome e cognome');return}
+      const cf=$('f_cf').value.replace(/\s/g,'').toUpperCase();
+      const d={nome,cognome,name:(nome+' '+cognome).trim(),cf,nascita:$('f_nasc').value,luogoNasc:$('f_luogo').value.trim(),residenza:$('f_res').value.trim(),tel:$('f_tel').value.trim(),total:parseInt($('f_total').value,10)||0,notes:$('f_notes').value.trim()};
+      if(id){Object.assign(pt(id),d)}
+      else{const n={id:uid(),sessions:[],exercises:[],photos:[],anam:{},archived:false,...d};db.patients.push(n);view={...view,page:'detail',id:n.id}}
+      save();closeModal();render();
+      if(cf&&!cfOk(cf))toast('Codice fiscale da controllare (salvato comunque)');
+      break}
+    case 'cp':copy(el.dataset.v);break;
+    case 'cpall':copy(anagText(p));break;
+    case 'addsess':sessForm(p,null);break;
+    case 'editsess':sessForm(p,+i);break;
+    case 'savesess':{
+      const date=$('f_date').value||today(),note=$('f_note').value.trim();
+      if(i===''||i==null)p.sessions.push({date,note});else{p.sessions[+i].date=date;p.sessions[+i].note=note}
+      save();closeModal();render();toast('Seduta '+p.sessions.length+' registrata');break}
+    case 'delsess':confirmBox('Eliminare questa seduta?','dosess','data-i="'+i+'"');break;
+    case 'dosess':p.sessions.splice(+i,1);save();closeModal();render();break;
+    case 'undosess':confirmBox('Annullare l’ultima seduta registrata?','dosess','data-i="'+(p.sessions.length-1)+'"');break;
+    case 'addex':exForm(p,null);break;
+    case 'editex':exForm(p,p.exercises.find(x=>x.id===id));break;
+    case 'saveex':{
+      const name=$('f_name').value.trim();if(!name){toast('Inserisci l’esercizio');return}
+      const dose=$('f_dose').value.trim(),freq=$('f_freq').value.trim(),note=$('f_note').value.trim();
+      if(id){const x=p.exercises.find(x=>x.id===id);x.name=name;x.dose=dose;x.freq=freq;x.note=note}
+      else p.exercises.push({id:uid(),name,dose,freq,note,sess:p.sessions.length});
+      save();closeModal();render();break}
+    case 'delex':{const dx=p.exercises.find(x=>x.id===id);if(dx&&dx.vid)mdrop(dx.vid);p.exercises=p.exercises.filter(x=>x.id!==id);save();closeModal();render();break}
+    case 'up':case 'down':{
+      const k=p.exercises.findIndex(x=>x.id===id),j=a==='up'?k-1:k+1;
+      if(j>=0&&j<p.exercises.length){[p.exercises[k],p.exercises[j]]=[p.exercises[j],p.exercises[k]];save();render()}break}
+    case 'share':shareModal(p);break;
+    case 'pdf':sharePdf(p);break;
+    case 'copytxt':copy(shareText(p));break;
+    case 'archive':p.archived=!p.archived;save();toast(p.archived?'Paziente archiviato':'Paziente riattivato');view={...view,page:'home',id:null};render();break;
+    case 'delpt':confirmBox('Eliminare definitivamente '+p.name+'?','dopt');break;
+    case 'dopt':{const dq=pt(view.id);if(dq)dropPatientMedia(dq)}db.patients=db.patients.filter(x=>x.id!==view.id);save();closeModal();view={...view,page:'home',id:null};render();break;
+    case 'editanam':anamModal(p);break;
+    case 'saveanam':p.anam={data:$('a0').value||today(),storia:$('a1').value.trim(),limiti:$('a2').value.trim(),obiettivi:$('a3').value.trim()};save();closeModal();render();toast('Anamnesi salvata');break;
+    case 'vid':{const x=p.exercises.find(q=>q.id===id);if(x){pend.ex=id;pend.pid=view.id;pend.rec=null;vidModal(p,x)}break}
+    case 'vidcam':pend.ex=id;pend.pid=view.id;flagCam('video');$('vcam').click();break;
+    case 'vidlib':pend.ex=id;pend.pid=view.id;flagCam('video');$('vlib').click();break;
+    case 'vidshare':shareVideo(p,id);break;
+    case 'viddel':confirmBox('Eliminare il video?','dovid','data-id="'+id+'"');break;
+    case 'dovid':{const x=p.exercises.find(q=>q.id===id);if(x&&x.vid){mdrop(x.vid);x.vid=null;save()}closeModal();render();break}
+    case 'newph':photoModal(p,g||'');break;
+    case 'phcam':flagCam('foto');$('pcam').click();break;
+    case 'phlib':flagCam('foto');$('plib').click();break;
+    case 'savephoto':savePhoto(p);break;
+    case 'opengroup':view={...view,page:'group',group:g,sel:[]};render();window.scrollTo(0,0);break;
+    case 'backdetail':view={...view,page:'detail'};render();window.scrollTo(0,0);break;
+    case 'selph':{let s=view.sel||[];s=s.includes(id)?s.filter(q=>q!==id):[...s,id].slice(-2);view.sel=s;render();break}
+    case 'cmpfl':{const l=groupList(p,view.group);if(l.length>1)cmpModal(l[0],l[l.length-1]);break}
+    case 'cmpsel':{const l=(view.sel||[]).map(k=>p.photos.find(q=>q.id===k)).filter(Boolean);if(l.length===2)cmpModal(l[0],l[1]);break}
+    case 'viewph':{const ph=p.photos.find(q=>q.id===id);if(ph){pend.rec=null;viewPhoto(ph)}break}
+    case 'phshare':sharePhoto(p,id);break;
+    case 'phedit':editPhoto(p,id);break;
+    case 'saveph':{const ph=p.photos.find(q=>q.id===id);if(!ph)break;const gn=$('f_group').value.trim();if(!gn){toast('Scrivi il movimento');break}const ex=p.photos.find(q=>q!==ph&&q.group.toLowerCase()===gn.toLowerCase());ph.group=ex?ex.group:gn;ph.date=$('f_date').value||ph.date;ph.note=$('f_note').value.trim();save();closeModal();view={...view,page:'group',group:ph.group,sel:[]};render();break}
+    case 'phdel':confirmBox('Eliminare questa foto?','dophdel','data-id="'+id+'"');break;
+    case 'dophdel':{const ph=p.photos.find(q=>q.id===id);if(ph){mdrop(ph.mid);p.photos=p.photos.filter(q=>q.id!==id);save();view.sel=(view.sel||[]).filter(k=>k!==id)}closeModal();render();break}
+    case 'rengroup':openModal('<h3>Rinomina gruppo</h3><label>Nome</label><input id="f_gn" value="'+esc(view.group)+'" autocomplete="off"><div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="dorengroup">Salva</button></div>');break;
+    case 'dorengroup':{const nn=$('f_gn').value.trim();if(!nn){toast('Scrivi un nome');break}const ex=p.photos.find(q=>q.group!==view.group&&q.group.toLowerCase()===nn.toLowerCase());const fin=ex?ex.group:nn;p.photos.forEach(q=>{if(q.group===view.group)q.group=fin});view.group=fin;save();closeModal();render();break}
+    case 'backup':backup();break;
+    case 'export':doExport();break;
+    case 'import':$('imp').click();break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){view.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('q');q.focus();q.setSelectionRange(pos,pos)}
+});
+
+$('pcam').addEventListener('change',onPhoto);
+$('plib').addEventListener('change',onPhoto);
+$('vcam').addEventListener('change',onVideo);
+$('vlib').addEventListener('change',onVideo);
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(unflagCam,6000)});
+let _was=null;try{_was=sessionStorage.getItem('pendCam');if(_was)sessionStorage.removeItem('pendCam')}catch(e){}
+if(_was)setTimeout(()=>openModal('<h3>'+(_was==='video'?'Video':'Foto')+' non salvato</h3><p>Mentre usavi la fotocamera il telefono ha riavviato l\u2019app e il file \u00e8 andato perso. Succede con i video lunghi o quando la memoria \u00e8 poca.</p><p><b>Come fare:</b> registra con l\u2019app Fotocamera del telefono, poi qui scegli \u201cDalla libreria\u201d.</p><div class="acts"><button class="btn pri" data-a="close">Ho capito</button></div>'),400);
+try{const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(ios&&location.protocol!=='https:'&&location.hostname!=='localhost')$('warn').hidden=false}catch(e){}
+load();render();
+</script>
+</body>
+</html>
