@@ -72,6 +72,11 @@ video{display:block;width:100%;max-height:58vh;border-radius:12px;background:#00
 .kv:first-child{border-top:0;padding-top:2px}
 .kv .v{font-weight:600;overflow-wrap:anywhere}
 .kv a{color:var(--ac);text-decoration:none}
+.dpv{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.dp{position:relative}
+.dp img{display:block;width:72px;height:92px;object-fit:cover;border-radius:8px;background:var(--ac2)}
+.dp button{position:absolute;top:-7px;right:-7px;width:26px;height:26px;border-radius:50%;border:0;background:var(--dan);color:#fff;font-size:16px;font-weight:700;padding:0;cursor:pointer;line-height:1}
+.dthumb{width:52px;height:66px;object-fit:cover;border-radius:8px;background:var(--ac2);flex:none}
 </style>
 </head>
 <body>
@@ -84,6 +89,8 @@ video{display:block;width:100%;max-height:58vh;border-radius:12px;background:#00
 <input type="file" id="plib" accept="image/*" style="display:none">
 <input type="file" id="vcam" accept="video/*" capture="environment" style="display:none">
 <input type="file" id="vlib" accept="video/*" style="display:none">
+<input type="file" id="dcam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="dlib" accept="image/*" multiple style="display:none">
 <datalist id="dl"></datalist>
 <datalist id="dlf"><option value="1 volta al giorno"><option value="2 volte al giorno"><option value="3 volte al giorno"><option value="Ogni giorno"><option value="A giorni alterni"><option value="3 volte a settimana"><option value="2 volte a settimana"><option value="1 volta a settimana"></datalist>
 <script>
@@ -153,10 +160,11 @@ function hydrate(root){
 }
 function dropPatientMedia(q){
   (q.photos||[]).forEach(f=>mdrop(f.mid));
+  (q.docs||[]).forEach(d=>d.pages.forEach(m=>mdrop(m)));
   (q.exercises||[]).forEach(x=>{if(x.vid)mdrop(x.vid)});
 }
 function norm(){
-  db.patients.forEach(p=>{p.photos=p.photos||[];p.anam=p.anam||{};p.exercises=p.exercises||[];p.sessions=p.sessions||[]});
+  db.patients.forEach(p=>{p.photos=p.photos||[];p.docs=p.docs||[];p.anam=p.anam||{};p.exercises=p.exercises||[];p.sessions=p.sessions||[]});
 }
 function loadImg(blob){
   return new Promise((res,rej)=>{
@@ -365,8 +373,100 @@ function cmpModal(a,b){
   hydrate($('m'));
 }
 
+/* ---- referti (foto di documenti) ---- */
+function clearPages(){
+  (pend.pages||[]).forEach(x=>URL.revokeObjectURL(x.url));
+  pend.pages=[];pend.drecs=null;
+}
+function docsHtml(p){
+  let h='<div class="top"><h2>Referti</h2><button class="btn pri sm" data-a="newdoc">+ Referto</button></div>';
+  if(!p.docs.length)h+='<div class="card"><div class="empty" style="padding:10px">Nessun referto. Fotografa le pagine e restano salvate qui.</div></div>';
+  p.docs.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(d=>{
+    h+='<div class="card pt" data-a="opendoc" data-id="'+d.id+'"><div class="row"><img class="dthumb" data-mid="'+d.pages[0]+'" data-t="1" alt="">'
+      +'<div class="grow"><div class="name">'+esc(d.title)+'</div><div class="mut">'+fmt(d.date)+' · '+d.pages.length+(d.pages.length===1?' pagina':' pagine')+'</div>'
+      +(d.note?'<div class="mut">'+esc(d.note)+'</div>':'')+'</div></div></div>';
+  });
+  return h;
+}
+function drawPages(){
+  const el=$('dpv');if(!el)return;
+  el.innerHTML=pend.pages.map((x,i)=>'<div class="dp"><img src="'+x.url+'" alt=""><button data-a="dprem" data-i="'+i+'">×</button></div>').join('');
+  const c=$('dcount');if(c)c.textContent=pend.pages.length?pend.pages.length+(pend.pages.length===1?' pagina pronta':' pagine pronte'):'Nessuna pagina ancora';
+}
+function docModal(p,doc){
+  clearPages();
+  openModal('<h3>'+(doc?'Aggiungi pagine':'Nuovo referto')+'</h3>'
+    +(doc?'<div class="mut">'+esc(doc.title)+'</div>'
+      :'<label>Titolo (es. RM ginocchio dx)</label><input id="f_dt" autocomplete="off">'
+       +'<label>Data del referto</label><input id="f_dd" type="date" value="'+today()+'">'
+       +'<label>Nota (opzionale)</label><input id="f_dn" autocomplete="off">')
+    +'<div class="acts"><button class="btn" data-a="dcam">📷 Scatta pagina</button><button class="btn" data-a="dlib">Dalla libreria</button></div>'
+    +'<div class="mut" id="dcount" style="margin-top:10px">Nessuna pagina ancora</div><div class="dpv" id="dpv"></div>'
+    +'<p class="mut" style="margin:10px 0 0;font-size:13px">Inquadra bene il foglio, con luce uniforme. Per più pagine tocca di nuovo “Scatta pagina”.</p>'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="savedoc" data-id="'+(doc?doc.id:'')+'">Salva</button></div>');
+}
+function onDocPage(e){
+  unflagCam();
+  const fs=[...e.target.files];e.target.value='';
+  if(!fs.length)return;
+  fs.forEach(f=>pend.pages.push({file:f,url:URL.createObjectURL(f)}));
+  drawPages();
+}
+async function saveDoc(p,docId){
+  const files=(pend.pages||[]).slice();
+  if(!files.length){toast('Aggiungi almeno una foto');return}
+  let doc=docId?p.docs.find(d=>d.id===docId):null,title,date,note;
+  if(!doc){
+    title=$('f_dt').value.trim();
+    if(!title){toast('Scrivi il titolo (es. RM ginocchio)');return}
+    date=$('f_dd').value||today();note=$('f_dn').value.trim();
+  }
+  toast('Salvataggio…');
+  try{
+    const mids=[];
+    for(const it of files){
+      const mid=uid();
+      const full=await shrink(it.file,2200,.86),th=await shrink(it.file,360,.8);
+      await mput({id:mid,blob:full,thumb:th,type:'image/jpeg'});
+      mids.push(mid);
+    }
+    if(doc)doc.pages.push(...mids);else{doc={id:uid(),title,date,note,pages:mids};p.docs.push(doc)}
+    save();closeModal();render();viewDoc(p,doc);toast('Referto salvato');
+  }catch(err){toast('Impossibile salvare (spazio insufficiente?)')}
+}
+function viewDoc(p,d){
+  const n=d.pages.length;
+  openModal('<h3>'+esc(d.title)+'</h3><div class="mut">'+fmt(d.date)+(d.note?' · '+esc(d.note):'')+' · '+n+(n===1?' pagina':' pagine')+'</div>'
+    +d.pages.map((m,i)=>'<div class="row" style="margin-top:14px"><div class="grow mut">Pagina '+(i+1)+'/'+n+'</div>'+(n>1?'<button class="btn sm dan" data-a="dpdel" data-id="'+d.id+'" data-i="'+i+'">Elimina pagina</button>':'')+'</div><img class="vimg" style="max-height:none" data-mid="'+m+'" alt="">').join('')
+    +'<div class="acts"><button class="btn pri" data-a="docshare" data-id="'+d.id+'">Condividi</button><button class="btn" data-a="adddocpages" data-id="'+d.id+'">+ Pagine</button></div>'
+    +'<div class="acts"><button class="btn" data-a="editdoc" data-id="'+d.id+'">Modifica</button><button class="btn dan" data-a="docdel" data-id="'+d.id+'">Elimina referto</button></div>'
+    +'<div class="acts"><button class="btn" data-a="close">Chiudi</button></div>');
+  hydrate($('m'));
+  Promise.all(d.pages.map(m=>mget(m).catch(()=>null))).then(list=>{pend.drecs={id:d.id,list}});
+}
+async function shareDoc(p,id){
+  const d=p.docs.find(q=>q.id===id);if(!d)return;
+  const recs=(pend.drecs&&pend.drecs.id===id)?pend.drecs.list:await Promise.all(d.pages.map(m=>mget(m).catch(()=>null)));
+  const ok=recs.filter(Boolean);
+  if(!ok.length){toast('Pagine non trovate');return}
+  const base=safe(d.title+' '+d.date);
+  const files=ok.map((r,i)=>new File([r.blob],base+(ok.length>1?' - '+(i+1):'')+'.jpg',{type:'image/jpeg'}));
+  try{
+    if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:d.title});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  files.forEach(f=>saveBlob(f,f.name));
+  toast('File salvati: li trovi nei Download');
+}
+function editDocModal(p,id){
+  const d=p.docs.find(q=>q.id===id);if(!d)return;
+  openModal('<h3>Modifica referto</h3><label>Titolo</label><input id="f_dt" value="'+esc(d.title)+'" autocomplete="off">'
+    +'<label>Data del referto</label><input id="f_dd" type="date" value="'+esc(d.date)+'">'
+    +'<label>Nota</label><input id="f_dn" value="'+esc(d.note)+'" autocomplete="off">'
+    +'<div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="saveeditdoc" data-id="'+id+'">Salva</button></div>');
+}
+
 function openModal(html){const m=$('m');m.innerHTML='<div class="sheet">'+html+'</div>';m.classList.add('on')}
-function closeModal(){$('m').classList.remove('on');$('m').innerHTML='';pend.photo=null;pend.rec=null;if(pend.pvu){URL.revokeObjectURL(pend.pvu);pend.pvu=null}}
+function closeModal(){$('m').classList.remove('on');$('m').innerHTML='';pend.photo=null;pend.rec=null;if(pend.pvu){URL.revokeObjectURL(pend.pvu);pend.pvu=null}clearPages()}
 $('m').addEventListener('click',e=>{if(e.target.id==='m')closeModal()});
 
 function refreshDatalist(){
@@ -420,6 +520,7 @@ function renderDetail(p){
   h+='</div>';
   if(p.exercises.length)h+='<button class="btn" style="width:100%" data-a="share">Invia scheda esercizi (PDF)</button>';
   h+=photosHtml(p);
+  h+=docsHtml(p);
   h+=anagHtml(p);
   h+='<h2>Storico sedute</h2><div class="card"><details><summary>'+n+' sedute registrate</summary>';
   if(!n)h+='<div class="mut" style="padding:8px 0">Nessuna seduta.</div>';
@@ -503,9 +604,9 @@ function confirmBox(msg,action,attrs){
 
 /* ---- backup ---- */
 function backup(){
-  const np=db.patients.reduce((a,p)=>a+(p.photos||[]).length,0);
+  const np=db.patients.reduce((a,p)=>a+(p.photos||[]).length+(p.docs||[]).reduce((b,d)=>b+d.pages.length,0),0);
   const nv=db.patients.reduce((a,p)=>a+p.exercises.filter(x=>x.vid).length,0);
-  openModal('<h3>Backup dati</h3><p class="mut">I dati stanno solo su questo dispositivo/browser. Il backup contiene pazienti, esercizi, anamnesi e le '+np+' foto. I '+nv+' video non sono inclusi: restano sul telefono (puoi salvarli o condividerli dal player di ogni esercizio).</p>'
+  openModal('<h3>Backup dati</h3><p class="mut">I dati stanno solo su questo dispositivo/browser. Il backup contiene pazienti, esercizi, anamnesi e le '+np+' foto (comprese quelle dei referti). I '+nv+' video non sono inclusi: restano sul telefono (puoi salvarli o condividerli dal player di ogni esercizio).</p>'
     +'<div class="acts"><button class="btn pri" data-a="export">Esporta backup</button><button class="btn" data-a="import">Importa backup</button></div>'
     +'<div class="acts"><button class="btn" data-a="close">Chiudi</button></div>');
 }
@@ -525,6 +626,10 @@ async function doExport(){
     for(const p of db.patients)for(const ph of (p.photos||[])){
       const r=await mget(ph.mid).catch(()=>null);
       if(r)media[ph.mid]=await blobToDataURL(r.blob);
+    }
+    for(const p of db.patients)for(const dc of (p.docs||[]))for(const m of dc.pages){
+      const r=await mget(m).catch(()=>null);
+      if(r)media[m]=await blobToDataURL(r.blob);
     }
     const blob=new Blob([JSON.stringify({patients:db.patients,media,v:2})],{type:'application/json'});
     const f='backup-pazienti-'+today()+'.json';
@@ -554,6 +659,19 @@ $('imp').addEventListener('change',e=>{
           }else if(await mget(ph.mid).catch(()=>null)){keep.add(ph.mid);ok.push(ph)}
         }
         p.photos=ok;
+        for(const dc of p.docs){
+          const pg=[];
+          for(const m of dc.pages){
+            const u=d.media&&d.media[m];
+            if(u){
+              const b=dataURLToBlob(u);let th;
+              try{th=await shrink(b,360,.8)}catch(x){}
+              await mput({id:m,blob:b,thumb:th,type:b.type});keep.add(m);pg.push(m);
+            }else if(await mget(m).catch(()=>null)){keep.add(m);pg.push(m)}
+          }
+          dc.pages=pg;
+        }
+        p.docs=p.docs.filter(dc=>dc.pages.length);
         for(const x of p.exercises){
           if(x.vid){if(await mget(x.vid).catch(()=>null))keep.add(x.vid);else x.vid=null}
         }
@@ -734,7 +852,7 @@ document.addEventListener('click',e=>{
       const cf=$('f_cf').value.replace(/\s/g,'').toUpperCase();
       const d={nome,cognome,name:(nome+' '+cognome).trim(),cf,nascita:$('f_nasc').value,luogoNasc:$('f_luogo').value.trim(),residenza:$('f_res').value.trim(),tel:$('f_tel').value.trim(),total:parseInt($('f_total').value,10)||0,notes:$('f_notes').value.trim()};
       if(id){Object.assign(pt(id),d)}
-      else{const n={id:uid(),sessions:[],exercises:[],photos:[],anam:{},archived:false,...d};db.patients.push(n);view={...view,page:'detail',id:n.id}}
+      else{const n={id:uid(),sessions:[],exercises:[],photos:[],docs:[],anam:{},archived:false,...d};db.patients.push(n);view={...view,page:'detail',id:n.id}}
       save();closeModal();render();
       if(cf&&!cfOk(cf))toast('Codice fiscale da controllare (salvato comunque)');
       break}
@@ -792,6 +910,20 @@ document.addEventListener('click',e=>{
     case 'dophdel':{const ph=p.photos.find(q=>q.id===id);if(ph){mdrop(ph.mid);p.photos=p.photos.filter(q=>q.id!==id);save();view.sel=(view.sel||[]).filter(k=>k!==id)}closeModal();render();break}
     case 'rengroup':openModal('<h3>Rinomina gruppo</h3><label>Nome</label><input id="f_gn" value="'+esc(view.group)+'" autocomplete="off"><div class="acts"><button class="btn" data-a="close">Annulla</button><button class="btn pri" data-a="dorengroup">Salva</button></div>');break;
     case 'dorengroup':{const nn=$('f_gn').value.trim();if(!nn){toast('Scrivi un nome');break}const ex=p.photos.find(q=>q.group!==view.group&&q.group.toLowerCase()===nn.toLowerCase());const fin=ex?ex.group:nn;p.photos.forEach(q=>{if(q.group===view.group)q.group=fin});view.group=fin;save();closeModal();render();break}
+    case 'newdoc':docModal(p,null);break;
+    case 'adddocpages':{const d=p.docs.find(q=>q.id===id);if(d)docModal(p,d);break}
+    case 'opendoc':{const d=p.docs.find(q=>q.id===id);if(d){pend.drecs=null;viewDoc(p,d)}break}
+    case 'dcam':flagCam('foto');$('dcam').click();break;
+    case 'dlib':flagCam('foto');$('dlib').click();break;
+    case 'dprem':{const x=pend.pages.splice(+i,1)[0];if(x)URL.revokeObjectURL(x.url);drawPages();break}
+    case 'savedoc':saveDoc(p,id);break;
+    case 'docshare':shareDoc(p,id);break;
+    case 'editdoc':editDocModal(p,id);break;
+    case 'saveeditdoc':{const d=p.docs.find(q=>q.id===id);if(!d)break;const t=$('f_dt').value.trim();if(!t){toast('Scrivi il titolo');break}d.title=t;d.date=$('f_dd').value||d.date;d.note=$('f_dn').value.trim();save();closeModal();render();viewDoc(p,d);break}
+    case 'docdel':confirmBox('Eliminare questo referto e tutte le sue pagine?','dodocdel','data-id="'+id+'"');break;
+    case 'dodocdel':{const d=p.docs.find(q=>q.id===id);if(d){d.pages.forEach(m=>mdrop(m));p.docs=p.docs.filter(q=>q.id!==id);save()}closeModal();render();break}
+    case 'dpdel':confirmBox('Eliminare questa pagina?','dodpdel','data-id="'+id+'" data-i="'+i+'"');break;
+    case 'dodpdel':{const d=p.docs.find(q=>q.id===id);if(d){const m=d.pages.splice(+i,1)[0];if(m)mdrop(m);if(!d.pages.length)p.docs=p.docs.filter(q=>q.id!==id);save();closeModal();render();if(d.pages.length)viewDoc(p,d)}else{closeModal()}break}
     case 'backup':backup();break;
     case 'export':doExport();break;
     case 'import':$('imp').click();break;
@@ -801,6 +933,8 @@ document.addEventListener('input',e=>{
   if(e.target.id==='q'){view.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('q');q.focus();q.setSelectionRange(pos,pos)}
 });
 
+$('dcam').addEventListener('change',onDocPage);
+$('dlib').addEventListener('change',onDocPage);
 $('pcam').addEventListener('change',onPhoto);
 $('plib').addEventListener('change',onPhoto);
 $('vcam').addEventListener('change',onVideo);
